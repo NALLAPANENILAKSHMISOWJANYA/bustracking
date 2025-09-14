@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Bus Tracking System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBT1x7Yug2FP_by8zXY9G_1_BCcs7jIGl0&libraries=places"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .header {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .logo i {
+      font-size: 2rem;
+      color: #fbbf24;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-tab {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      padding: 0.75rem 1.5rem;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-tab:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-tab.active {
+      background: linear-gradient(45deg, #10b981, #059669);
+      border-color: #10b981;
+      box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .dashboard {
+      display: none;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .dashboard.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dashboard-title {
+      color: #1f2937;
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dashboard-subtitle {
+      color: #6b7280;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+
+    .search-container {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 1rem 1.5rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 15px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+      color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(45deg, #10b981, #059669);
+      color: white;
+    }
+
+    .btn-warning {
+      background: linear-gradient(45deg, #f59e0b, #d97706);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(45deg, #ef4444, #dc2626);
+      color: white;
+    }
+
+    .btn-sos {
+      background: linear-gradient(45deg, #dc2626, #991b1b);
+      color: white;
+      font-size: 1.2rem;
+      padding: 1.25rem 2.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+
+    .map-container {
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin: 2rem 0;
+    }
+
+    #map, #adminMap {
+      height: 500px;
+      width: 100%;
+    }
+
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .info-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .info-card i {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      opacity: 0.8;
+    }
+
+    .info-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .info-card p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .status-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .status-display {
+      background: #f8fafc;
+      padding: 1.5rem;
+      border-radius: 15px;
+      margin: 1rem 0;
+      border-left: 5px solid #3b82f6;
+    }
+
+    .alerts-container {
+      background: #fef2f2;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      border-left: 5px solid #ef4444;
+    }
+
+    .alert-item {
+      background: white;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border-left: 4px solid #ef4444;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: slideIn 0.3s ease-in;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .nav-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+
+      .dashboard {
+        padding: 1.5rem;
+      }
+
+      .search-container {
+        flex-direction: column;
+      }
+
+      .status-buttons {
+        flex-direction: column;
+      }
+
+      .btn {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body onload="initMap()">
+  <header class="header">
+    <div class="logo">
+      <i class="fas fa-bus"></i>
+      <span>Smart Bus Tracker</span>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showDashboard('passenger')">
+        <i class="fas fa-user"></i> Passenger
+      </button>
+      <button class="nav-tab" onclick="showDashboard('driver')">
+        <i class="fas fa-steering-wheel"></i> Driver
+      </button>
+      <button class="nav-tab" onclick="showDashboard('admin')">
+        <i class="fas fa-cog"></i> Admin
+      </button>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- Passenger Dashboard -->
+    <div id="passenger" class="dashboard active">
+      <h1 class="dashboard-title">
+        <i class="fas fa-map-marker-alt"></i>
+        Passenger Dashboard
+      </h1>
+      <p class="dashboard-subtitle">Track your bus in real-time, check arrival times and seat availability</p>
+      
+      <div class="search-container">
+        <input id="locationInput" type="text" class="search-input" placeholder="🔍 Enter your destination..." />
+        <button id="searchBtn" class="btn btn-primary">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <div class="info-cards">
+        <div class="info-card">
+          <i class="fas fa-clock"></i>
+          <h3>Estimated Arrival</h3>
+          <p id="eta">Calculating... <span class="loading"></span></p>
+        </div>
+        <div class="info-card">
+          <i class="fas fa-users"></i>
+          <h3>Bus Occupancy</h3>
+          <p id="occupancy">Loading status...</p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 2rem;">
+        <button class="btn btn-sos" onclick="triggerSOS('🚨 Passenger Emergency Alert!')">
+          <i class="fas fa-exclamation-triangle"></i>
+          Emergency SOS
+        </button>
+      </div>
+    </div>
+
+    <!-- Driver Dashboard -->
+    <div id="driver" class="dashboard">
+      <h1 class="dashboard-title">
+        <i class="fas fa-tachometer-alt"></i>
+        Driver Dashboard
+      </h1>
+      <p class="dashboard-subtitle">Update bus status, manage occupancy, and report emergencies</p>
+
+      <h3 style="color: #374151; margin-bottom: 1rem;">
+        <i class="fas fa-users"></i> Update Bus Occupancy Status
+      </h3>
+      
+      <div class="status-buttons">
+        <button class="btn btn-success" onclick="updateOccupancy('Seats Available', 'success')">
+          <i class="fas fa-check-circle"></i> Seats Available
+        </button>
+        <button class="btn btn-warning" onclick="updateOccupancy('Few Seats Left', 'warning')">
+          <i class="fas fa-exclamation-circle"></i> Few Seats Left
+        </button>
+        <button class="btn btn-danger" onclick="updateOccupancy('Full/Standing Only', 'danger')">
+          <i class="fas fa-times-circle"></i> Bus Full
+        </button>
+      </div>
+
+      <div id="driverStatus" class="status-display">
+        <i class="fas fa-info-circle"></i> No status updates yet
+      </div>
+
+      <div style="text-align: center; margin-top: 2rem;">
+        <button class="btn btn-sos" onclick="triggerSOS('🚨 Driver Emergency - Immediate Assistance Required!')">
+          <i class="fas fa-exclamation-triangle"></i>
+          Driver Emergency SOS
+        </button>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin" class="dashboard">
+      <h1 class="dashboard-title">
+        <i class="fas fa-chart-line"></i>
+        Admin Control Center
+      </h1>
+      <p class="dashboard-subtitle">Monitor all buses, routes, and emergency alerts in real-time</p>
+
+      <div class="map-container">
+        <div id="adminMap"></div>
+      </div>
+
+      <div class="alerts-container">
+        <h3 style="color: #dc2626; margin-bottom: 1rem;">
+          <i class="fas fa-bell"></i> Live Alerts & Notifications
+        </h3>
+        <div id="alerts">
+          <p style="color: #6b7280; font-style: italic;">
+            <i class="fas fa-shield-alt"></i> System monitoring... All systems operational
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let map, adminMapInstance, service;
+    let busMarker, routePolyline;
+    let occupancyStatus = "Unknown";
+    let currentPosition = 0;
+
+    function initMap() {
+      const center = new google.maps.LatLng(17.385044, 78.486671);
+      
+      // Passenger Map
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: center,
+        zoom: 13,
+        styles: [
+          {
+            featureType: "all",
+            elementType: "geometry.fill",
+            stylers: [{ weight: "2.00" }]
+          },
+          {
+            featureType: "all",
+            elementType: "geometry.stroke",
+            stylers: [{ color: "#9c9c9c" }]
+          },
+          {
+            featureType: "all",
+            elementType: "labels.text",
+            stylers: [{ visibility: "on" }]
+          }
+        ]
+      });
+
+      // Enhanced bus route
+      const busRoute = [
+        { lat: 17.385044, lng: 78.486671 },
+        { lat: 17.390000, lng: 78.488000 },
+        { lat: 17.395000, lng: 78.492000 },
+        { lat: 17.400000, lng: 78.490000 },
+        { lat: 17.405000, lng: 78.495000 },
+        { lat: 17.410000, lng: 78.500000 }
+      ];
+
+      // Create route polyline
+      routePolyline = new google.maps.Polyline({
+        path: busRoute,
+        geodesic: true,
+        strokeColor: "#3b82f6",
+        strokeOpacity: 1.0,
+        strokeWeight: 6
+      });
+      routePolyline.setMap(map);
+
+      // Create bus marker with custom icon
+      busMarker = new google.maps.Marker({
+        position: busRoute[0],
+        map: map,
+        icon: {
+          url: "https://maps.google.com/mapfiles/ms/icons/bus.png",
+          scaledSize: new google.maps.Size(40, 40)
+        },
+        title: "Bus 21 - Route Express"
+      });
+
+      // Enhanced bus movement simulation
+      let routeIndex = 0;
+      const moveInterval = setInterval(() => {
+        if (routeIndex < busRoute.length) {
+          busMarker.setPosition(busRoute[routeIndex]);
+          map.panTo(busRoute[routeIndex]);
+          
+          const remainingTime = (busRoute.length - routeIndex) * 3;
+          document.getElementById("eta").innerHTML = `${remainingTime} minutes <i class="fas fa-clock" style="color: #10b981;"></i>`;
+          
+          routeIndex++;
+        } else {
+          clearInterval(moveInterval);
+          document.getElementById("eta").innerHTML = `Arrived! <i class="fas fa-check" style="color: #10b981;"></i>`;
+        }
+      }, 5000);
+
+      // Search functionality
+      document.getElementById("searchBtn").addEventListener("click", performSearch);
+      document.getElementById("locationInput").addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') performSearch();
+      });
+
+      // Initialize with default occupancy
+      updateOccupancy("Seats Available", "success");
+    }
+
+    function performSearch() {
+      const location = document.getElementById("locationInput").value;
+      if (location) {
+        const request = {
+          query: location,
+          fields: ["name", "geometry"]
+        };
+        
+        service = new google.maps.places.PlacesService(map);
+        service.findPlaceFromQuery(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
+            map.setCenter(results[0].geometry.location);
+            map.setZoom(15);
+            
+            new google.maps.Marker({
+              position: results[0].geometry.location,
+              map: map,
+              icon: {
+                url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                scaledSize: new google.maps.Size(32, 32)
+              },
+              title: "Searched Location"
+            });
+          }
+        });
+      }
+    }
+
+    function showDashboard(id) {
+      // Update nav tabs
+      document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // Show dashboard
+      document.querySelectorAll('.dashboard').forEach(d => d.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      
+      if (id === 'admin') {
+        setTimeout(initAdminMap, 100);
+      }
+    }
+
+    function updateOccupancy(status, type) {
+      occupancyStatus = status;
+      const statusIcons = {
+        success: 'fas fa-check-circle',
+        warning: 'fas fa-exclamation-triangle',
+        danger: 'fas fa-times-circle'
+      };
+      
+      const colors = {
+        success: '#10b981',
+        warning: '#f59e0b',
+        danger: '#ef4444'
+      };
+
+      const driverStatusEl = document.getElementById("driverStatus");
+      driverStatusEl.innerHTML = `
+        <i class="${statusIcons[type]}" style="color: ${colors[type]};"></i>
+        Status Updated: ${status} at ${new Date().toLocaleTimeString()}
+      `;
+      driverStatusEl.style.borderLeftColor = colors[type];
+
+      document.getElementById("occupancy").innerHTML = `
+        ${status} <i class="${statusIcons[type]}" style="color: ${colors[type]};"></i>
+      `;
+    }
+
+    function triggerSOS(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const alertsContainer = document.getElementById("alerts");
+      
+      // Create alert element
+      const alertDiv = document.createElement("div");
+      alertDiv.className = "alert-item";
+      alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
+        <div>
+          <strong>${message}</strong><br>
+          <small>Time: ${timestamp} | Location: Transmitted to Control Center</small>
+        </div>
+      `;
+      
+      alertsContainer.appendChild(alertDiv);
+      
+      // Show confirmation
+      alert(`🚨 ${message}\n\n✅ Emergency alert sent successfully!\n📍 Your location has been shared with the control center.\n⏰ Emergency response team notified.`);
+    }
+
+    function initAdminMap() {
+      adminMapInstance = new google.maps.Map(document.getElementById("adminMap"), {
+        center: { lat: 17.385044, lng: 78.486671 },
+        zoom: 12,
+        styles: [
+          {
+            featureType: "all",
+            elementType: "geometry.fill",
+            stylers: [{ weight: "2.00" }]
+          }
+        ]
+      });
+
+      // Add multiple bus markers
+      const buses = [
+        { lat: 17.385044, lng: 78.486671, id: "Bus 21", route: "Express Route" },
+        { lat: 17.400000, lng: 78.450000, id: "Bus 15", route: "City Circle" },
+        { lat: 17.420000, lng: 78.480000, id: "Bus 8", route: "Airport Express" }
+      ];
+
+      buses.forEach(bus => {
+        new google.maps.Marker({
+          position: { lat: bus.lat, lng: bus.lng },
+          map: adminMapInstance,
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/bus.png",
+            scaledSize: new google.maps.Size(35, 35)
+          },
+          title: `${bus.id} - ${bus.route}`
+        });
+      });
+    }
+
+    // Auto-update occupancy display
+    setInterval(() => {
+      if (occupancyStatus !== "Unknown") {
+        const statusElement = document.getElementById("occupancy");
+        if (statusElement && !statusElement.innerHTML.includes('fas')) {
+          statusElement.innerHTML = `${occupancyStatus} <i class="fas fa-sync-alt" style="color: #3b82f6;"></i>`;
+        }
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
